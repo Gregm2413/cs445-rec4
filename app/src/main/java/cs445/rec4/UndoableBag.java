@@ -11,6 +11,8 @@ import java.lang.UnsupportedOperationException;
 
 public class UndoableBag<E> extends ArrayBag<E> {
     // TODO Create two stack reference variables called undoStack and redoStack
+    private StackInterface<Action<E>> undoStack;
+    private StackInterface<Action<E>> redoStack;
 
     /**
      * Creates an empty bag with default capacity.
@@ -34,6 +36,12 @@ public class UndoableBag<E> extends ArrayBag<E> {
         boolean result = super.add(newEntry);
 
         // TODO keep track of added entry for undo operations
+        if (result) {
+            redoStack.clear();  //only have 1 operation there (can have multiple in undo stack)
+
+            Action<E> inserted = new Action<E>('i', newEntry);
+            undoStack.push(inserted);
+        }
 
         return result;
     }
@@ -50,6 +58,13 @@ public class UndoableBag<E> extends ArrayBag<E> {
 
         // TODO keep track of the item removed for later undo operations
 
+        if (removedItem != null) {
+            redoStack.clear();
+
+            Action<E> removed = new Action<E>('r', removedItem);
+            undoStack.push(removed);
+        }
+
         return removedItem;
     }
 
@@ -64,6 +79,12 @@ public class UndoableBag<E> extends ArrayBag<E> {
         boolean result = super.remove(anEntry);
 
         // TODO keep track of the item removed for later undo operations
+        if (result) {
+            redoStack.clear();
+
+            Action<E> removed = new Action<E>('r', anEntry);
+            undoStack.push(removed);
+        }
 
         return result;
     }
@@ -84,8 +105,27 @@ public class UndoableBag<E> extends ArrayBag<E> {
      */
     public boolean undo() {
         // TODO implement the undo method (including fixing the return value)
+        if (undoStack.isEmpty()) {
+            return false;
+        }
 
-        return false;
+        Action<E> operation = undoStack.pop();
+        redoStack.push(operation);
+
+        //super points to ArrayBag and it has a method called remove. operation.getAction() gives us the char that corresponds
+        //to insertion/removal but operation.getData (from Action.java) will give data we are trying to insert/remove
+        switch(operation.getAction()) {
+            case 'i':
+                return super.remove(operation.getData());
+
+            case 'r':
+                return super.add(operation.getData());
+
+            default:
+                return false;
+        }
+
+        //return false;
     }
 
     /**
@@ -94,8 +134,26 @@ public class UndoableBag<E> extends ArrayBag<E> {
      */
     public boolean redo() {
         // TODO implement the redo method (including fixing the return value)
+        if (undoStack.isEmpty()) {
+            return false;
+        }
 
-        return false;
+        Action<E> operation = redoStack.pop();
+        undoStack.push(operation);
+
+        //same operations
+        switch(operation.getAction()) {
+            case 'i':
+                return super.add(operation.getData());
+
+            case 'r':
+                return super.remove(operation.getData());
+
+            default:
+                return false;
+        }
+
+        //return false;
     }
 
 }
